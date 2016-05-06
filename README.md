@@ -8,7 +8,7 @@ Current support is only for Datto Appliances using your Datto XML API key.
 <h5>Support Plan:</h5>
   Datto XML Feed</br>
   VaultLogix via host agent</br>
-  StorageCraft via host agent, RPC, and DCOM</br>
+  StorageCraft via <strike>host agent, RPC, and DCOM</strike> ShadowControl server JSON feed</br>
   (Feel free to add support for your own)</br>
 
 -------------
