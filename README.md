@@ -1,9 +1,9 @@
 # BackupDashboard
 Small Dashboard to monitor backup systems<br>
 
-Only setup required is to add your API key to ../apiKey.cnf<br>
-Key file must be one level below your main Dashboard folder.<br><br>
-Current support is only for Datto Appliances using your Datto XML API key.
+Only setup required is to add your API key to ../config.php<br>
+The config.php file must be one level below your main Dashboard, this is only so I dont let my keys out on accident. :D<br><br>
+Current support is only for Datto Appliances using your Datto XML API key and ShadowControl server for StorageCraft JSON feed.
 
 <h5>Support Plan:</h5>
   Datto XML Feed</br>

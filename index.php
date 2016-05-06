@@ -1,117 +1,108 @@
 <?php
 ini_set('display_errors', 'On');
 ini_set('html_errors', 0);
-//include('libs/xmltoarray.php');
+
+require_once('../config.php');
+	// Return variables $apiKeyDatto and $apiKeySTC
 
 
 
 // ----- DATTO ------ LOAD DATA
-$apiKeyFile = fopen("../apiKeyDatto.cnf", 'r') or die ("Unable to open ../apiKeyDatto.cnf");
-$apiKeyDatto = rtrim(fgets($apiKeyFile)); fclose($apiKeyFile);
+if ($apiKeyDatto){
+	if (!extension_loaded('simplexml')) {
+		echo 'SimpleXML is NOT loaded! Please install SimpleXML - Apache will require php5-cli</br> #apt-get install php5-cli'; exit;
+	} else {
+		$xmlNode = "https://partners.dattobackup.com/xml2.php?type=status&apiKey={$apiKeyDatto}";
+		$sxml = simplexml_load_file($xmlNode);
+	}
 
-if (!extension_loaded('simplexml')) {
-	echo 'SimpleXML is NOT loaded! Please install SimpleXML - Apache will require php5-cli</br> #apt-get install php5-cli'; exit;
-} else {
-	$xmlNode = "https://partners.dattobackup.com/xml2.php?type=status&apiKey={$apiKeyDatto}";
-	$sxml = simplexml_load_file($xmlNode);
+	$sTable = "";
+	$fleetSize = $sxml->attributes();
+
+
+
+	// ------ BUILD DATTO TABLE ------
+	foreach ($sxml->Device as $result){										// Iterate over each device
+			//var_dump($sxml->attributes());
+		$itrLastBackupStatus = "online";   									// dummy load for default state
+
+		foreach ($result->BackupVolumes->BackupVolume as $volume){  		// Iterate over each agent on device/ set one status per device
+			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus; 
+			// Should add exclusions? for out of service devices or hidden devices		
+			//print $itrLastBackupStatus;
+		}
+		$sTable .= '
+			<div class="' .$itrLastBackupStatus. '">
+			<div class="entity " onclick="window.location.href=\'#\'">
+			<h2>'.$result->Hostname.'</h2>
+			<p>Last online: '.$result->Lastseen.'</p>
+			<p>Last check: 34 seconds ago</p>
+			</div>
+			</div>';
+
+
+		// ---------------------------------
+		$mysplod = explode(" ", $result->Lastseen);
+		$devDate = $mysplod[0];
+		$devTime = $mysplod[1];
+
+		$dateSplit = preg_split('/\s[—–-]\s/', $devDate);
+
+		//var_dump($dateSplit); echo "</br>";	
+		// ----------------------------------		
+	}
+	// ------ END BUILD DATTO TABLE ------
 }
-
-$sTable = "";
-$fleetSize = $sxml->attributes();
 // ------ END DATTO -----
 
 
 
 // ------ STORAGECRAFT ------ LOAD DATA
-$apiKeyFile = fopen("../apiKeySTC.cnf", 'r') or die ("Unable to open ../apiKeySTC.cnf");
-$apiKeySTC = rtrim(fgets($apiKeyFile)); fclose($apiKeyFile);
+if ($apiKeySTC){
+	$ch = curl_init();
 
-$ch = curl_init();
+	// set URL and other appropriate options
+	curl_setopt($ch, CURLOPT_URL, "https://66.63.67.130/api/reports/status/");
+	curl_setopt($ch, CURLOPT_PORT , 8443);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array("CMD_TOKEN: {$apiKeySTC}"));
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
 
-// set URL and other appropriate options
-curl_setopt($ch, CURLOPT_URL, "https://66.63.67.130/api/reports/status/");
-curl_setopt($ch, CURLOPT_PORT , 8443);
-curl_setopt($ch, CURLOPT_HTTPHEADER, array("CMD_TOKEN: {$apiKeySTC}"));
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+	$result = curl_exec($ch);  curl_close($ch);
+	$data_STC = json_decode($result,true);
 
-$result = curl_exec($ch);  curl_close($ch);
-$data_STC = json_decode($result,true);
+	$countSTC=count($data_STC);
 
-$countSTC=count($data_STC);
 
-//curl -v -k -H "CMD_TOKEN:----------------------------------" https://66.63.67.130:8443/api/reports/status/
-//var_dump(json_decode($result, true));
+
+	// ------ BUILD STC TABLE ------
+	//$itrLastBackupStatus = "online";   									// dummy load for default state
+	foreach ($data_STC as $result){
+		$itrLastBackupStatus = ($result["status"] != "ok") ? "offline" : "online"; 
+		$sTable .= '
+			<div class="' .$itrLastBackupStatus. '">
+			<div class="entity " onclick="window.location.href=\'#\'">
+			<h2>'.$result["name"].'</h2>
+			<p>Last online: '.$result["machine_details"]["last_boot"].'</p>
+			<p>Last check: 34 seconds ago</p>
+			</div>
+			</div>';
+	 } 
+	// ------ END BUILD STC TABLE ------
+}
 // ------ END STORAGECRAFT ------
 
 
 
 
-//------ Testing Block ------
-// foreach($sxml->Device->BackupVolumes->BackupVolume as $result){
-// 	var_dump($result->LastBackupStatus);
-// 	var_dump($result->Agent);
-// }
-//------ End Testing Block ------
 
 
 
-// ------ BUILD DATTO TABLE ------
-foreach ($sxml->Device as $result){										// Iterate over each device
-		//var_dump($sxml->attributes());
-	$itrLastBackupStatus = "online";   									// dummy load for default state
-
-	foreach ($result->BackupVolumes->BackupVolume as $volume){  		// Iterate over each agent on device/ set one status per device
-		$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus; 
-		// Should add exclusions? for out of service devices or hidden devices		
-		//print $itrLastBackupStatus;
-	}
-	$sTable .= '
-		<div class="' .$itrLastBackupStatus. '">
-		<div class="entity " onclick="window.location.href=\'#\'">
-		<h2>'.$result->Hostname.'</h2>
-		<p>Last online: '.$result->Lastseen.'</p>
-		<p>Last check: 34 seconds ago</p>
-		</div>
-		</div>';
-
-
-	// ---------------------------------
-	$mysplod = explode(" ", $result->Lastseen);
-	$devDate = $mysplod[0];
-	$devTime = $mysplod[1];
-
-	$dateSplit = preg_split('/\s[—–-]\s/', $devDate);
-
-	//var_dump($dateSplit); echo "</br>";	
-	// ----------------------------------		
-}
-// ------ END BUILD DATTO TABLE ------
-
-
-
-
-// ------ BUILD STC TABLE ------
-//$itrLastBackupStatus = "online";   									// dummy load for default state
-foreach ($data_STC as $result){
-	$itrLastBackupStatus = ($result["status"] != "ok") ? "offline" : "online"; 
-	$sTable .= '
-		<div class="' .$itrLastBackupStatus. '">
-		<div class="entity " onclick="window.location.href=\'#\'">
-		<h2>'.$result["name"].'</h2>
-		<p>Last online: '.$result["machine_details"]["last_boot"].'</p>
-		<p>Last check: 34 seconds ago</p>
-		</div>
-		</div>';
- } 
-// ------ END BUILD STC TABLE ------
 
 
 
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
