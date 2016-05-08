@@ -27,10 +27,15 @@ if ($apiKeyDatto){
 		$itrLastBackupStatus = "online";   									// dummy load for default state
 
 		foreach ($result->BackupVolumes->BackupVolume as $volume){  		// Iterate over each agent on device/ set one status per device
-			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus; 
+			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus;
+
 			// Should add exclusions? for out of service devices or hidden devices		
 			//print $itrLastBackupStatus;
 		}
+
+		foreach ($listIgnoreDatto as $ignore) {								// Ignore list for Datto
+			$itrLastBackupStatus = ($result->Hostname == $ignore) ? "online" : $itrLastBackupStatus;}
+
 		$sTable .= '
 			<div class="' .$itrLastBackupStatus. '">
 			<div class="entity " onclick="window.location.href=\'#\'">
@@ -52,6 +57,8 @@ if ($apiKeyDatto){
 		// ----------------------------------		
 	}
 	// ------ END BUILD DATTO TABLE ------
+
+	$sTable .= "</br></br></br></br></br></br>";
 }
 // ------ END DATTO -----
 
@@ -80,6 +87,11 @@ if ($apiKeySTC){
 	//$itrLastBackupStatus = "online";   									// dummy load for default state
 	foreach ($data_STC as $result){
 		$itrLastBackupStatus = ($result["status"] != "ok") ? "offline" : "online"; 
+
+		foreach ($listIgnoreSTC as $ignore) {								// Ignore list for ShadowControl
+			$itrLastBackupStatus = ($result["name"] == $ignore && $result["status"] != "ok") ? "online" : $itrLastBackupStatus;
+		}
+
 		$sTable .= '
 			<div class="' .$itrLastBackupStatus. '">
 			<div class="entity " onclick="window.location.href=\'#\'">
