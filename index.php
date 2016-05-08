@@ -2,14 +2,13 @@
 ini_set('display_errors', 'On');
 ini_set('html_errors', 0);
 
-require_once('../config.php');
-	// Return variables $apiKeyDatto and $apiKeySTC
+require_once('../config.php');												// Return variables $apiKeyDatto and $apiKeySTC
 
 
 
 // ----- DATTO ------ LOAD DATA
 if ($apiKeyDatto){
-	if (!extension_loaded('simplexml')) {
+	if (!extension_loaded('simplexml')) {   							
 		echo 'SimpleXML is NOT loaded! Please install SimpleXML - Apache will require php5-cli</br> #apt-get install php5-cli'; exit;
 	} else {
 		$xmlNode = "https://partners.dattobackup.com/xml2.php?type=status&apiKey={$apiKeyDatto}";
@@ -22,15 +21,11 @@ if ($apiKeyDatto){
 
 
 	// ------ BUILD DATTO TABLE ------
-	foreach ($sxml->Device as $result){										// Iterate over each device
-			//var_dump($sxml->attributes());
+	foreach ($sxml->Device as $result){										// Iterate over each device			
 		$itrLastBackupStatus = "online";   									// dummy load for default state
 
 		foreach ($result->BackupVolumes->BackupVolume as $volume){  		// Iterate over each agent on device/ set one status per device
 			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus;
-
-			// Should add exclusions? for out of service devices or hidden devices		
-			//print $itrLastBackupStatus;
 		}
 
 		foreach ($listIgnoreDatto as $ignore) {								// Ignore list for Datto
@@ -45,16 +40,15 @@ if ($apiKeyDatto){
 			</div>
 			</div>';
 
-
-		// ---------------------------------
+		// ---------------------------------								// INDEV CODE BLOCK
 		$mysplod = explode(" ", $result->Lastseen);
 		$devDate = $mysplod[0];
 		$devTime = $mysplod[1];
 
 		$dateSplit = preg_split('/\s[—–-]\s/', $devDate);
-
-		//var_dump($dateSplit); echo "</br>";	
 		// ----------------------------------		
+
+
 	}
 	// ------ END BUILD DATTO TABLE ------
 
@@ -66,26 +60,28 @@ if ($apiKeyDatto){
 
 // ------ STORAGECRAFT ------ LOAD DATA
 if ($apiKeySTC){
-	$ch = curl_init();
+	if (!$hostSTC || !$portSTC) {
+		echo 'ShadowControl PORT or HOST IP not found.  Please verify configuration file. CONFIG.PHP'; exit;
+	} else {
+			$ch = curl_init();
+			// set URL and other appropriate options
+			curl_setopt($ch, CURLOPT_URL, "https://{$hostSTC}/api/reports/status/");
+			curl_setopt($ch, CURLOPT_PORT , $portSTC);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array("CMD_TOKEN: {$apiKeySTC}"));
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
 
-	// set URL and other appropriate options
-	curl_setopt($ch, CURLOPT_URL, "https://{$hostSTC}/api/reports/status/");
-	curl_setopt($ch, CURLOPT_PORT , 8443);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array("CMD_TOKEN: {$apiKeySTC}"));
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+			$result = curl_exec($ch);  curl_close($ch);
+			$dataSTC = json_decode($result,true);
 
-	$result = curl_exec($ch);  curl_close($ch);
-	$data_STC = json_decode($result,true);
-
-	$countSTC=count($data_STC);
-
+			$countSTC=count($dataSTC);
+	}
 
 
 	// ------ BUILD STC TABLE ------
 	//$itrLastBackupStatus = "online";   									// dummy load for default state
-	foreach ($data_STC as $result){
+	foreach ($dataSTC as $result){
 		$itrLastBackupStatus = ($result["status"] != "ok") ? "offline" : "online"; 
 
 		foreach ($listIgnoreSTC as $ignore) {								// Ignore list for ShadowControl
@@ -102,6 +98,9 @@ if ($apiKeySTC){
 			</div>';
 	 } 
 	// ------ END BUILD STC TABLE ------
+
+
+
 }
 // ------ END STORAGECRAFT ------
 
