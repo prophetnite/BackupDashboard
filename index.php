@@ -69,7 +69,7 @@ if ($apiKeySTC){
 	$ch = curl_init();
 
 	// set URL and other appropriate options
-	curl_setopt($ch, CURLOPT_URL, "https://66.63.67.130/api/reports/status/");
+	curl_setopt($ch, CURLOPT_URL, "https://{$hostSTC}/api/reports/status/");
 	curl_setopt($ch, CURLOPT_PORT , 8443);
 	curl_setopt($ch, CURLOPT_HTTPHEADER, array("CMD_TOKEN: {$apiKeySTC}"));
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
