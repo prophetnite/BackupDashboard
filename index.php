@@ -3,8 +3,15 @@ ini_set('display_errors', 'On');
 ini_set('html_errors', 0);
 
 require_once('../config.php');												// Return variables $apiKeyDatto and $apiKeySTC
+require_once('modules/datto.inc');											// Return variables $apiKeyDatto and $apiKeySTC
+require_once('modules/stc.inc');											// Return variables $apiKeyDatto and $apiKeySTC
 
+$sTable = "";
+$sTableB = "";
+$fleetDatto = 0;
+$fleetSTC = 0;
 
+	
 
 // ----- DATTO ------ LOAD DATA
 if ($apiKeyDatto){
@@ -15,44 +22,42 @@ if ($apiKeyDatto){
 		$sxml = simplexml_load_file($xmlNode);
 	}
 
-	$sTable = "";
-	$fleetSize = $sxml->attributes();
+	//$fleetDatto = $sxml->attributes();									// Total appliances
 
 
 
 	// ------ BUILD DATTO TABLE ------
 	foreach ($sxml->Device as $result){										// Iterate over each device			
-		$itrLastBackupStatus = "online";   									// dummy load for default state
+		//$itrLastBackupStatus = "online";   								// dummy load for default state
 
 		foreach ($result->BackupVolumes->BackupVolume as $volume){  		// Iterate over each agent on device/ set one status per device
-			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : $itrLastBackupStatus;
+			$itrLastBackupStatus = ($volume->LastBackupStatus == "Fail") ? "offline" : "online";
+
+			foreach ($listIgnoreDatto as $ignore) {								// Ignore list for Datto
+				$itrLastBackupStatus = ($result->Hostname == $ignore && $volume->LastBackupStatus == "Fail") ? "online" : $itrLastBackupStatus;}
+
+			$sTable .= '
+				<div class="' .$itrLastBackupStatus. '">
+				<div class="entity " onclick="window.location.href=\'#\'">
+				<h2>'.$result->Hostname.'</h2>
+				<h2>'.$result->Agent.'</h2>
+				<p>Last online: '.$result->Lastseen.'</p>
+				<p>Last check: 34 seconds ago</p>
+				</div>
+				</div>';
+
+				$fleetDatto++;
+
+				$mysplod = explode(" ", $result->Lastseen);
+				$devDate = $mysplod[0];
+				$devTime = $mysplod[1];
+				$dateSplit = preg_split('/\s[—–-]\s/', $devDate);
 		}
-
-		foreach ($listIgnoreDatto as $ignore) {								// Ignore list for Datto
-			$itrLastBackupStatus = ($result->Hostname == $ignore) ? "online" : $itrLastBackupStatus;}
-
-		$sTable .= '
-			<div class="' .$itrLastBackupStatus. '">
-			<div class="entity " onclick="window.location.href=\'#\'">
-			<h2>'.$result->Hostname.'</h2>
-			<p>Last online: '.$result->Lastseen.'</p>
-			<p>Last check: 34 seconds ago</p>
-			</div>
-			</div>';
-
-		// ---------------------------------								// INDEV CODE BLOCK
-		$mysplod = explode(" ", $result->Lastseen);
-		$devDate = $mysplod[0];
-		$devTime = $mysplod[1];
-
-		$dateSplit = preg_split('/\s[—–-]\s/', $devDate);
-		// ----------------------------------		
-
-
 	}
 	// ------ END BUILD DATTO TABLE ------
 
-	$sTable .= "</br></br></br></br></br></br>";
+
+
 }
 // ------ END DATTO -----
 
@@ -78,17 +83,17 @@ if ($apiKeySTC){
 			$countSTC=count($dataSTC);
 	}
 
-
 	// ------ BUILD STC TABLE ------
 	//$itrLastBackupStatus = "online";   									// dummy load for default state
 	foreach ($dataSTC as $result){
+		$fleetSTC++;
 		$itrLastBackupStatus = ($result["status"] != "ok") ? "offline" : "online"; 
 
 		foreach ($listIgnoreSTC as $ignore) {								// Ignore list for ShadowControl
 			$itrLastBackupStatus = ($result["name"] == $ignore && $result["status"] != "ok") ? "online" : $itrLastBackupStatus;
 		}
 
-		$sTable .= '
+		$sTableB .= '
 			<div class="' .$itrLastBackupStatus. '">
 			<div class="entity " onclick="window.location.href=\'#\'">
 			<h2>'.$result["name"].'</h2>
@@ -139,7 +144,7 @@ if ($apiKeySTC){
 <body data-spy="scroll" data-target=".subnav" data-offset="50" class="black_background">
  
 <div id="main-container">
-	<div class="page-header"><div class="header-label"><h1>Status - Datto Fleet: <?php echo $fleetSize; ?> ---- StorageCraft Fleet: </h1></div></div>
+	<div class="page-header"><div class="header-label"><h1>Backup Server Status -- Total servers: <?php echo $fleetDatto+$fleetSTC; ?></h1></div></div>
 <div id="main-content">
 
 
@@ -150,7 +155,11 @@ if ($apiKeySTC){
 		<div id="flow-layout" class="tab-pane active">
 			<div class="entity-container">
 
+				<div class="page-header"><div class="header-label"><h1>Status - Datto Fleet: <?php echo $fleetDatto; ?> </h1></div></div>
 				<?php echo $sTable; ?>
+
+				<div class="page-header"><div class="header-label"><h1>Status - StorageCraft Fleet: <?php echo $fleetSTC; ?> </h1></div></div>
+				<?php echo $sTableB; ?>
 
 			</div>
 		</div>
