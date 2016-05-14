@@ -10,6 +10,11 @@ $sTable = "";
 $sTableB = "";
 $fleetDatto = 0;
 $fleetSTC = 0;
+$fleetDattoError = 0;
+$fleetDattoErrorCount = 0;
+
+$fleetSTCError = 0;
+
 
 	
 
@@ -36,18 +41,21 @@ if ($apiKeyDatto){
 			foreach ($listIgnoreDatto as $ignore) {								// Ignore list for Datto
 				$itrLastBackupStatus = ($result->Hostname == $ignore && $volume->LastBackupStatus == "Fail") ? "online" : $itrLastBackupStatus;}
 
+			$volume->Agent = (strlen($volume->Agent) == 0) ? "NAS" : $volume->Agent;  // look for NAS agent with no Agent Name
+			
 			$sTable .= '
 				<div class="' .$itrLastBackupStatus. '">
 				<div class="entity " onclick="window.location.href=\'#\'">
-				<h2>'.$result->Hostname.'</h2>
-				<h2>'.$result->Agent.'</h2>
+				<h2>'.$result->Hostname.'</br>'.$volume->Agent.'</h2>
 				<p>Last online: '.$result->Lastseen.'</p>
 				<p>Last check: 34 seconds ago</p>
 				</div>
 				</div>';
 
 				$fleetDatto++;
-
+				if ($itrLastBackupStatus != "online"){$fleetDattoError++;}
+				//$fleetDattoError = ($itrLastBackupStatus == "online") ? $fleetDattoError : $fleetDattoError++;
+				
 				$mysplod = explode(" ", $result->Lastseen);
 				$devDate = $mysplod[0];
 				$devTime = $mysplod[1];
@@ -93,6 +101,8 @@ if ($apiKeySTC){
 			$itrLastBackupStatus = ($result["name"] == $ignore && $result["status"] != "ok") ? "online" : $itrLastBackupStatus;
 		}
 
+		$result["name"] = (strlen($result["name"]) > 16) ? substr($result["name"], 0, 18) : $result["name"];  // Truncate long names
+			
 		$sTableB .= '
 			<div class="' .$itrLastBackupStatus. '">
 			<div class="entity " onclick="window.location.href=\'#\'">
@@ -101,6 +111,7 @@ if ($apiKeySTC){
 			<p>Last check: 34 seconds ago</p>
 			</div>
 			</div>';
+			if ($itrLastBackupStatus != "online"){$fleetSTCError++;}			
 	 } 
 	// ------ END BUILD STC TABLE ------
 
@@ -145,8 +156,8 @@ if ($apiKeySTC){
  
 <div id="main-container">
 	<div class="page-header"><div class="header-label"><h1>Backup Server Status -- Total servers: <?php echo $fleetDatto+$fleetSTC; ?></h1></div></div>
-<div id="main-content">
 
+<div id="main-content">
 
 <div id="page-container">
 	<div id="flashmessage" class="hide"></div>
@@ -155,10 +166,16 @@ if ($apiKeySTC){
 		<div id="flow-layout" class="tab-pane active">
 			<div class="entity-container">
 
-				<div class="page-header"><div class="header-label"><h1>Status - Datto Fleet: <?php echo $fleetDatto; ?> </h1></div></div>
+
+				<div class="page-header"><div class="header-label"><h1>
+				Status - Datto Fleet: <?php echo $fleetDatto; ?> --
+				Percent Error:        <?php echo (sprintf('%0.2f',$fleetDattoError / $fleetDatto * 100)); ?> </h1></div></div>
+
 				<?php echo $sTable; ?>
 
-				<div class="page-header"><div class="header-label"><h1>Status - StorageCraft Fleet: <?php echo $fleetSTC; ?> </h1></div></div>
+				<div class="page-header"><div class="header-label"><h1>
+				Status - StorageCraft Fleet: <?php echo $fleetSTC; ?>--
+				Percent Error: <?php echo (sprintf('%0.2f', $fleetSTCError / $fleetSTC * 100)); ?> </h1></div></div>
 				<?php echo $sTableB; ?>
 
 			</div>
@@ -166,7 +183,5 @@ if ($apiKeySTC){
 	</div>
 </div>
 
-
- 
 </body>
 </html>
