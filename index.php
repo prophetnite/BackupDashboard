@@ -8,6 +8,7 @@ require_once('modules/stc.inc');											// Return variables $apiKeyDatto and 
 
 $sTable = "";
 $sTableB = "";
+$sTableTEMP = "";
 $fleetDatto = 0;
 $fleetSTC = 0;
 $fleetDattoError = 0;
@@ -42,8 +43,8 @@ if ($apiKeyDatto){
 				$itrLastBackupStatus = ($result->Hostname == $ignore && $volume->LastBackupStatus == "Fail") ? "online" : $itrLastBackupStatus;}
 
 			$volume->Agent = (strlen($volume->Agent) == 0) ? "NAS" : $volume->Agent;  // look for NAS agent with no Agent Name
-			
-			$sTable .= '
+
+			$sTableTEMP = '
 				<div class="' .$itrLastBackupStatus. '">
 				<div class="entity " onclick="window.location.href=\'#\'">
 				<h2>'.$result->Hostname.'</br>'.$volume->Agent.'</h2>
@@ -51,6 +52,18 @@ if ($apiKeyDatto){
 				<p>Last check: 34 seconds ago</p>
 				</div>
 				</div>';
+
+
+			if (isset($_GET["sort"])){
+				if ($_GET["sort"] == 'true') {
+					$sTable = ($itrLastBackupStatus == 'online') ? $sTable .= $sTableTEMP : $sTable = $sTableTEMP . $sTable;
+				}elseif ($_GET["sort"] == 'false') {
+					$sTable .= $sTableTEMP;
+				}	
+			}else {
+				$sTable .= $sTableTEMP;
+			}
+			
 
 				$fleetDatto++;
 				if ($itrLastBackupStatus != "online"){$fleetDattoError++;}
@@ -103,7 +116,7 @@ if ($apiKeySTC){
 
 		$result["name"] = (strlen($result["name"]) > 16) ? substr($result["name"], 0, 18) : $result["name"];  // Truncate long names
 			
-		$sTableB .= '
+		$sTableTEMP = '
 			<div class="' .$itrLastBackupStatus. '">
 			<div class="entity " onclick="window.location.href=\'#\'">
 			<h2>'.$result["name"].'</h2>
@@ -111,6 +124,19 @@ if ($apiKeySTC){
 			<p>Last check: 34 seconds ago</p>
 			</div>
 			</div>';
+
+			if (isset($_GET["sort"])){
+				if ($_GET["sort"] == 'true') {
+					$sTableB = ($itrLastBackupStatus == 'online') ? $sTableB .= $sTableTEMP : $sTableB = $sTableTEMP . $sTableB;
+				}elseif ($_GET["sort"] == 'false') {
+					$sTableB .= $sTableTEMP;
+				}	
+			}else {
+				$sTableB .= $sTableTEMP;
+			}
+			
+			//$sTableB = ($itrLastBackupStatus == 'online') ? $sTableB .= $sTableTEMP : $sTableB = $sTableTEMP . $sTableB;
+
 			if ($itrLastBackupStatus != "online"){$fleetSTCError++;}			
 	 } 
 	// ------ END BUILD STC TABLE ------
